@@ -1,79 +1,93 @@
+#!/usr/bin/env python
 import sys
-import os
-import csv
 import argparse
 import datetime
 import logging
 import shutil
-import yaml
+import pkg_resources
+from pathlib import Path
 
-from sarand import params, full_pipeline, utils
+from sarand import full_pipeline, utils
 from sarand.__init__ import __version__
-from sarand.full_pipeline import update_full_pipeline_params, full_pipeline_main
-from sarand.utils import initialize_logger, validate_print_parameters_tools
-
-def full_pipeline_init(args, params):
-    """
-    """
-    # Rewrite parameters of params which are available in data and
-    # are supposed to be set for this function
-    params = update_full_pipeline_params(params, args)
-    #logging file
-    log_name = 'logger_'+datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')+'.log'
-    initialize_logger(params.main_dir, log_name)
-    #logging.info(str(params.__dict__))
-
-    #create the output directory;
-    if not os.path.exists(params.output_dir):
-        os.makedirs(params.output_dir)
-    #if it exists, delete it and create a new one
-    # else:
-    #     try:
-    #         shutil.rmtree(args.output_dir)
-    #     except OSError as e:
-    #         logging.error("Error: %s - %s." % (e.filename, e.strerror))
-    #     os.makedirs(args.output_dir)
-    logging.info('Running full_pipeline ...')
-    params = validate_print_parameters_tools(params)
-    full_pipeline_main(params)
+from sarand.full_pipeline import full_pipeline_main
+from sarand.utils import initialize_logger, check_dependencies, check_file, validate_range
 
 def main():
-    parser = argparse.ArgumentParser(description="Extract the neighborhood of the "
-                                        "target Antimicrobial Resistance (AMR) "
-                                        "genes from the assembly graph.",
-                                        prog='sarand',
-                                        usage='sarand <tool> <options>')
+    """
+    Main CLI entrypoint for sarand
+    """
+    run_time = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')
+    parser = argparse.ArgumentParser(description="Identify and extract the "
+                                        "local neighbourhood of target genes "
+                                        " (such as AMR) from a GFA formatted "
+                                        " assembly graph",
+                                        prog='sarand')
     parser.add_argument('-v', '--version', action='version',
                         version=f"%(prog)s {__version__}")
-    # add tool specific parsers
-    subparser = parser.add_subparsers(title="Available tools under sarand",help='')
-    # add subparser for full_pipeline.py
-    full_parser = subparser.add_parser('full_pipeline', description="Complete pipeline "
-                                        "to extract AMR neighborhood from assembly graph "
-                                        "and annotate it",
-                                       usage="sarand full_pipeline <options>",
-                                       help='')
-    #full_parser = create_arguments(params, full_parser)
-    full_parser.add_argument('--config_file', '-C', type = str, default='',
-		help = 'the config file to set parameters for full_pipeline()')
-    full_parser.set_defaults(func = full_pipeline_init)
+
+    parser.add_argument('-i', '--input_gfa', required=True,
+                        help="Path to assembly graph (in GFA format) "
+                                    "that you wish to analyse",
+                        type=check_file)
+    parser.add_argument('-j', '--num_cores', default=1, type=validate_range(int, 1, 100),
+                        help="Number of cores to use")
+    parser.add_argument("-c", "--coverage_difference", default=30, type=validate_range(int, -1, 500),
+                        help="Maximum coverage difference to include "
+                                    "when filtering graph neighbourhood. Use "
+                                    "-1 to indicate no coverage threshold "
+                                    "(although this will likely lead to false "
+                                    "positive neighbourhoods).")
+    parser.add_argument("-t", "--target_genes",
+                        default=Path(pkg_resources.resource_filename(__name__, 'data/CARD_AMR_seq.fasta')),
+                        type=check_file, help="Target genes to "
+                        "search for in the assembly graph (fasta formatted). "
+                        " Default is the pre-installed CARD database")
+    parser.add_argument("-x", "--min_target_identity", default=95, type=validate_range(float, 0.1, 100),
+                        help="Minimum identity/coverage to identify presence "
+                            "of target gene in assembly graph")
+    parser.add_argument("-l", "--neighbourhood_length", default=1000, type=validate_range(int, 0, 100000),
+                        help="Size of gene neighbourhood to extract from the "
+                             "assembly graph")
+    parser.add_argument("-o", "--output_dir", help="Output folder for current "
+                        "run of sarand",
+                        default=Path(f"sarand_results_{run_time}")),
+    parser.add_argument("-f", "--force", default=False, action='store_true',
+                        help="Force overwrite any previous files/output directories")
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("--no_rgi", default=True, action='store_false',
+                        help="Disable RGI based annotation of graph neighbourhoods")
+    group.add_argument("--rgi_include_loose", default=False, action='store_true',
+                        help="Include loose criteria hits if using RGI to annotate"
+                            " graph neighbourhoods")
 
     args = parser.parse_args()
-    #If no argument has been passed
-    if not len(sys.argv) > 1:
-        print("Please use -h option to access usage information!")
-        sys.exit()
-    # Check if the config file has correctly been set and exist???
-    if args.config_file=='' or not os.path.isfile(args.config_file) or\
-        not args.config_file.lower().endswith('yaml'):
-        print(args.config_file+" doesn't exist or not in the right format! Please provide the correct path to the YAML config file!")
-        sys.exit()
-    # Read config file into a dictionery
-    print("Reading the config file '"+args.config_file+"' ...")
-    with open(args.config_file, 'r') as yamlfile:
-        data = yaml.load(yamlfile, Loader=yaml.FullLoader)
+    # check dependencies work
+    dependencies = ['Bandage --version', 'prokka --version', 'blastn -version']
+    if not args.no_rgi:
+        dependencies.append("rgi main --version")
+    check_dependencies(dependencies)
 
-    args.func(data, params)
+    if args.output_dir.exists():
+        if not args.force:
+            parser.error(f"{args.output_dir} already exists, please use a different "
+                          "--output_dir or use --force to overwrite this directory")
+        else:
+            print(f"Overwriting previously created {args.output_dir}",
+                  file=sys.stderr)
+            shutil.rmtree(args.output_dir)
+            args.output_dir.mkdir()
+    else:
+        args.output_dir.mkdir()
+
+    # convert argparse to config dictionary
+    args.run_time = run_time
+
+    #logging file
+    initialize_logger(args.output_dir / f"run_{run_time}.log")
+    logging.info('Sarand initialised...')
+
+    # execute main workflow
+    full_pipeline_main(args)
 
 
 if __name__ == '__main__':

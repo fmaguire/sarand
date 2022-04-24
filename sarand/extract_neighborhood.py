@@ -36,7 +36,6 @@ from csv import DictReader
 from sarand.utils import reverse_sign, find_node_orient, find_node_name, find_node_name_orient,\
 					exist_in_path, compare_two_sequences, read_path_info_from_align_file,\
 					create_fasta_file
-from sarand.params import Assembler_name
 
 BANDAGE_PATH = '/media/Data/tools/Bandage_Ubuntu_dynamic_v0_8_1/Bandage'
 OUT_DIR = 'output'
@@ -778,11 +777,11 @@ def calculate_coverage(segment, max_kmer_size, node, assembler):
 		coverage
 
 	"""
-	if assembler.name == Assembler_name.metaspades.name or assembler.name == Assembler_name.bcalm.name:
+	if assembler.name == 'metaspades' or assembler.name == 'bcalm':
 		coverage = segment.KC/(len(segment.sequence)-max_kmer_size)
-	elif assembler.name == Assembler_name.megahit.name:
+	elif assembler.name == 'megahit':
 		coverage = float(node.split('cov_')[1].split('_')[0])
-	elif assembler.name == Assembler_name.metacherchant.name or assembler.name == Assembler_name.spacegraphcats.name :
+	elif assembler.name == 'metacherchant' or assembler.name == 'spacegraphcats':
 		coverage = -1
 	else:
 		logging.error("no way of calculating node coverage has been defined for this assembler!")
@@ -793,7 +792,7 @@ def calculate_coverage(segment, max_kmer_size, node, assembler):
 def generate_node_range_coverage(myGraph, node_list, orientation_list, start_pos,
 								end_pos, pre_path_list, pre_path_length_list,
 								post_path_list, post_path_length_list,
-								max_kmer_size, assembler = Assembler_name.metaspades):
+								max_kmer_size, assembler = 'metaspades'):
 	"""
 	To generate a list of all nodes representing a sequence their start and end
 	in the sequence and their coverage
@@ -921,7 +920,7 @@ def generate_node_range_coverage(myGraph, node_list, orientation_list, start_pos
 
 def extract_neighborhood_sequence(gfa_file, length, amr_path_info,
 									path_thr,output_name, max_kmer_size, seq_info,
-									output_dir, time_out_counter, assembler = Assembler_name.metaspades):
+									output_dir, time_out_counter, assembler = 'metaspades'):
 	"""
 	To extract all linear sequences with length = length from the start and end of the AMR gene
 	In some cases, we might need to extract only the upstream or downstream
@@ -948,7 +947,7 @@ def extract_neighborhood_sequence(gfa_file, length, amr_path_info,
 		myGraph = gfapy.Gfa.from_file(gfa_file)
 	except Exception as e:
 		logging.error('Not loading the graph successfully: '+str(e))
-		if assembler.name == Assembler_name.metacherchant.name:
+		if assembler.name == 'metacherchant':
 			return [],[],[],[]
 		else:
 			import pdb; pdb.set_trace()
@@ -1058,7 +1057,7 @@ def find_amr_related_nodes(amr_file, gfa_file, output_dir, bandage_path = BANDAG
 
 	return found, paths_info
 
-def check_if_similar_ng_extractions_exist(amr_path_info, amr_paths_info, assembler= Assembler_name.metaspades):
+def check_if_similar_ng_extractions_exist(amr_path_info, amr_paths_info, assembler='metaspades'):
 	"""
 	To check the new AMR path found by alignment with the ones already processed!
 	If there is a similar AMR path in amr_paths_info, we don't need to process
@@ -1222,7 +1221,7 @@ def neighborhood_sequence_extraction(gfa_file, length, output_dir,
 									#output_name = 'ng_sequences',
 									path_node_threshold = 10 ,
 									max_kmer_size = 55, time_out_counter = -1,
-									assembler = Assembler_name.metaspades,
+									assembler = 'metaspades',
 									amr_seq_align_info = ''):
 	"""
 	The core function to extract the sequences/paths preceding and following the AMR sequence
