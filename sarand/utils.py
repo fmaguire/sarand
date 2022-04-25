@@ -12,41 +12,51 @@ import argparse
 import logging
 import re
 import csv
+import datetime
 import collections
 import shutil
 import subprocess
 from pathlib import Path
 
+
 def extract_name_from_file_name(file_name):
-    """
-    """
+    """ """
     return os.path.splitext(os.path.basename(file_name))[0]
 
+
 def amr_name_from_comment(amr_comment):
-    """
-    """
-    amr_name = amr_comment.split('[')[0].split('|')[-1].strip().replace(' ','_').replace("'",';').replace('/', ']')
+    """ """
+    amr_name = (
+        amr_comment.split("[")[0]
+        .split("|")[-1]
+        .strip()
+        .replace(" ", "_")
+        .replace("'", ";")
+        .replace("/", "]")
+    )
     return amr_name
-    #amr_name_processed = ''.join(e for e in amr_name_processed1 if e.isalpha() or e.isnumeric() or e=='_' or e=='-')
+
 
 def amr_name_from_title(amr_title):
-    """
-    """
-    return amr_title.strip().replace(' ','_').replace("'",';').replace('/', ']')
+    """ """
+    return amr_title.strip().replace(" ", "_").replace("'", ";").replace("/", "]")
+
 
 def restricted_amr_name_from_modified_name(amr_name):
-    """
-    """
-    amr_name1 = amr_name.replace(";",'SS')
-    amr_name1 = ''.join(e for e in amr_name1 if e.isalpha() or e.isnumeric() or e=='_' or e=='-')
+    """ """
+    amr_name1 = amr_name.replace(";", "SS")
+    amr_name1 = "".join(
+        e for e in amr_name1 if e.isalpha() or e.isnumeric() or e == "_" or e == "-"
+    )
     return amr_name1
 
-def retreive_original_amr_name(amr_name):
-    """
-    """
-    return amr_name.replace(';', "'").replace(']', '/')
 
-def create_fasta_file(seq, output_dir, comment = "> sequence:\n", file_name = 'temp'):
+def retreive_original_amr_name(amr_name):
+    """ """
+    return amr_name.replace(";", "'").replace("]", "/")
+
+
+def create_fasta_file(seq, output_dir, comment="> sequence:\n", file_name="temp"):
     """
     To create a fasta file for a sequence
     Parameters:
@@ -57,18 +67,18 @@ def create_fasta_file(seq, output_dir, comment = "> sequence:\n", file_name = 't
     Return:
         the address of the fasta file
     """
-    myfile_name = os.path.join(output_dir, file_name+'.fasta')
+    myfile_name = os.path.join(output_dir, file_name + ".fasta")
     if os.path.isfile(myfile_name):
         os.remove(myfile_name)
-    myfile = open(myfile_name, 'w')
+    myfile = open(myfile_name, "w")
     myfile.write(comment)
-    if not comment.endswith('\n'):
-        myfile.write('\n')
+    if not comment.endswith("\n"):
+        myfile.write("\n")
     myfile.write(seq)
-    if not seq.endswith('\n'):
-        myfile.write('\n')
+    if not seq.endswith("\n"):
+        myfile.write("\n")
     myfile.close()
-    return  myfile_name
+    return myfile_name
 
 
 def initialize_logger(log_file_path):
@@ -76,10 +86,8 @@ def initialize_logger(log_file_path):
     Initialise the log handler using a specific log_file_path
     """
     logging.basicConfig(level=logging.DEBUG)
-    #logging.basicConfig()
-    log_formatter = logging.Formatter(
-        "%(asctime)s [%(levelname)-5.5s]	%(message)s"
-    )
+    # logging.basicConfig()
+    log_formatter = logging.Formatter("%(asctime)s [%(levelname)-5.5s]	%(message)s")
     root_logger = logging.getLogger()
     file_handler = logging.FileHandler(log_file_path)
     file_handler.setFormatter(log_formatter)
@@ -87,7 +95,6 @@ def initialize_logger(log_file_path):
     console_handler = logging.StreamHandler(sys.stderr)
     console_handler.setFormatter(log_formatter)
     root_logger.addHandler(console_handler)
-
 
 
 def retrieve_AMR(file_path):
@@ -98,14 +105,15 @@ def retrieve_AMR(file_path):
     Return:
         the sequence of the AMR gene in lower case
     """
-    amr_name = ''
+    amr_name = ""
     with open(file_path) as fp:
         for i, line in enumerate(fp):
-            #skip comment line
-            if line.startswith('>'):
+            # skip comment line
+            if line.startswith(">"):
                 amr_name = amr_name_from_comment(line[:-1])
                 continue
             return line, amr_name
+
 
 def reverse_sign(sign):
     """
@@ -115,33 +123,37 @@ def reverse_sign(sign):
     Return:
         the reverse sign
     """
-    if sign=='-':
-        return '+'
-    elif sign=='+':
-        return '-'
+    if sign == "-":
+        return "+"
+    elif sign == "+":
+        return "-"
     else:
         logging.error("ERROR: ivalid sign!")
-        sys.exit()
+        sys.exit(1)
+
 
 def find_node_orient(node):
     """
     To remove specific characters and return the last character of what remains
     as the orient of the node
     """
-    return re.sub('[]}]', '', node)[-1]
+    return re.sub("[]}]", "", node)[-1]
+
 
 def find_node_name(node):
     """
     To remove specific characters and return the rest except the last character
     as the node name
     """
-    return re.sub('[]{}[]','', node)[:-1]
+    return re.sub("[]{}[]", "", node)[:-1]
+
 
 def find_node_name_orient(node):
     """
     To remove specific characters and return the rest as the name+orient of the node
     """
-    return re.sub('[]{}[]','', node)
+    return re.sub("[]{}[]", "", node)
+
 
 def exist_in_path(path, mynode):
     """
@@ -153,9 +165,10 @@ def exist_in_path(path, mynode):
         True if mynode is in the path; False otherwise
     """
     for i, node in enumerate(path):
-        if find_node_name_orient(node)==mynode:
+        if find_node_name_orient(node) == mynode:
             return i
     return -1
+
 
 def extract_files(gfiles, message):
     """
@@ -171,24 +184,30 @@ def extract_files(gfiles, message):
         the list of file(s) address
     """
     if isinstance(gfiles, list):
-        #check if these are files (not directories)
+        # check if these are files (not directories)
         if os.path.isfile(gfiles[0]):
             return gfiles
         else:
             logging.error(message)
-            sys.exit()
-        #elif os.path.isdir(gfiles[0])
+            sys.exit(1)
+        # elif os.path.isdir(gfiles[0])
     elif os.path.isfile(gfiles):
         return [gfiles]
     elif os.path.isdir(gfiles):
-        myfiles = [os.path.join(gfiles, f) for f in os.listdir(gfiles) \
-                            if os.path.isfile(os.path.join(gfiles, f))]
+        myfiles = [
+            os.path.join(gfiles, f)
+            for f in os.listdir(gfiles)
+            if os.path.isfile(os.path.join(gfiles, f))
+        ]
         return myfiles
-    elif message!='':
+    elif message != "":
         logging.error(message)
-        sys.exit()
+        sys.exit(1)
 
-def run_RGI(input_file, output_dir, seq_description, include_loose = False, delete_rgi_files = False):
+
+def run_RGI(
+    input_file, output_dir, seq_description, include_loose=False, delete_rgi_files=False
+):
     """
     To run RGI and annotate AMRs in the sequence
     # To ensure consistency between Prokka and RGI findings, we annotate found proteins
@@ -201,7 +220,7 @@ def run_RGI(input_file, output_dir, seq_description, include_loose = False, dele
     Return:
         the list of extracted annotation information for the sequence
     """
-    rgi_dir = os.path.join(output_dir , "rgi_dir")
+    rgi_dir = os.path.join(output_dir, "rgi_dir")
     if not os.path.exists(rgi_dir):
         try:
             os.makedirs(rgi_dir)
@@ -210,38 +229,65 @@ def run_RGI(input_file, output_dir, seq_description, include_loose = False, dele
                 raise
             pass
 
-    output_file_name = os.path.join(rgi_dir ,"rgi_output_"+seq_description+"_"+datetime.datetime.now().strftime('%Y-%m-%d_%H-%M'))
-    #remove any potential * from the sequence
-    delete_a_string_from_file('*', input_file)
-    arg_list = ["rgi","main", "--input_sequence", input_file, "--output_file",
-                output_file_name, "--input_type", "protein", "--clean", "--exclude_nudge"]
+    output_file_name = os.path.join(
+        rgi_dir,
+        "rgi_output_"
+        + seq_description
+        + "_"
+        + datetime.datetime.now().strftime("%Y-%m-%d_%H-%M"),
+    )
+    # remove any potential * from the sequence
+    delete_a_string_from_file("*", input_file)
+    arg_list = [
+        "rgi",
+        "main",
+        "--input_sequence",
+        input_file,
+        "--output_file",
+        output_file_name,
+        "--input_type",
+        "protein",
+        "--clean",
+        "--exclude_nudge",
+    ]
     if include_loose:
         carg_list.append("--include_loose")
-    rgi_command = subprocess.run(arg_list, stdout=subprocess.PIPE, check= True)
-    logging.info(rgi_command.stdout.decode('utf-8'))
+    rgi_command = subprocess.run(arg_list, stdout=subprocess.PIPE, check=True)
+    logging.info(rgi_command.stdout.decode("utf-8"))
     seq_info_list = []
-    if os.path.isfile(output_file_name + '.txt'):
-        with open(output_file_name + '.txt', newline = '') as rgi_file:
-            rgi_reader = csv.reader(rgi_file, delimiter='\t')
+    if os.path.isfile(output_file_name + ".txt"):
+        with open(output_file_name + ".txt", newline="") as rgi_file:
+            rgi_reader = csv.reader(rgi_file, delimiter="\t")
             next(rgi_reader)
             for row in rgi_reader:
-                seq_info = {'ORF_ID':row[0], 'gene':row[8].strip(),
-                'prediction_type':row[5].strip(), 'best_identities':float(row[9]),
-                'family':row[16].strip()}
+                seq_info = {
+                    "ORF_ID": row[0],
+                    "gene": row[8].strip(),
+                    "prediction_type": row[5].strip(),
+                    "best_identities": float(row[9]),
+                    "family": row[16].strip(),
+                }
                 seq_info_list.append(seq_info)
     else:
         logging.error("ERROR: RGI didn't run successfully!")
-        sys.exit()
-    #delete temp files
-    if delete_rgi_files and os.path.isfile(output_file_name + '.txt'):
-        os.remove(output_file_name + '.txt')
-    if delete_rgi_files and os.path.isfile(output_file_name + '.json'):
-        os.remove(output_file_name + '.json')
+        sys.exit(1)
+    # delete temp files
+    if delete_rgi_files and os.path.isfile(output_file_name + ".txt"):
+        os.remove(output_file_name + ".txt")
+    if delete_rgi_files and os.path.isfile(output_file_name + ".json"):
+        os.remove(output_file_name + ".json")
 
     return seq_info_list
 
-def annotate_sequence(seq, seq_description, output_dir, prokka_prefix, use_RGI = True,\
-                        RGI_include_loose = False, delete_prokka_dir = False):
+
+def annotate_sequence(
+    seq,
+    seq_description,
+    output_dir,
+    use_RGI=True,
+    RGI_include_loose=False,
+    delete_prokka_dir=False,
+):
     """
     To run Prokka for a sequence and extract required information from its
         generated output files
@@ -250,68 +296,100 @@ def annotate_sequence(seq, seq_description, output_dir, prokka_prefix, use_RGI =
         seq_description: a small description of the sequence used for naming
         output_dir:  the path for the output directory
         use_RGI:	RGI annotations incorporated for AMR annotation
-        prokka_prefix: to run prokka via docker or conda or any other source properly
     Return:
         the list of extracted annotation information for the sequence
     """
-    #write the sequence into a temporary file
-    seq_file_name = create_fasta_file(seq, '', file_name='temp_'+datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')+seq_description)
+    # write the sequence into a temporary file
+    seq_file_name = create_fasta_file(
+        seq,
+        "",
+        file_name="temp_"
+        + datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        + seq_description,
+    )
     pid = os.getpid()
-    prokka_dir = 'prokka_dir_'+seq_description+'_'+str(pid)+'_'+datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')
-    prefix_name = 'mygenome_'+seq_description
-    arg_list = ["prokka", "--metagenome", "--outdir", prokka_dir, "--prefix",
-                prefix_name, "--fast", "--notrna", seq_file_name]
-    if prokka_prefix!="":
-        pre_list = prokka_prefix.strip().split(" ")
-        arg_list = pre_list + arg_list
-    prokka_command = subprocess.run(arg_list, stdout=subprocess.PIPE, check= True)
-    logging.info(prokka_command.stdout.decode('utf-8'))
-    #move prokka directory to the right address
+    prokka_dir = (
+        "prokka_dir_"
+        + seq_description
+        + "_"
+        + str(pid)
+        + "_"
+        + datetime.datetime.now().strftime("%Y-%m-%d_%H-%M")
+    )
+    prefix_name = "mygenome_" + seq_description
+    arg_list = [
+        "prokka",
+        "--metagenome",
+        "--outdir",
+        prokka_dir,
+        "--prefix",
+        prefix_name,
+        "--fast",
+        "--notrna",
+        seq_file_name,
+    ]
+    prokka_command = subprocess.run(arg_list, stdout=subprocess.PIPE, check=True)
+    logging.info(prokka_command.stdout.decode("utf-8"))
+    # move prokka directory to the right address
     shutil.move(prokka_dir, os.path.join(output_dir, prokka_dir))
-    prokka_dir = os.path.join(output_dir , prokka_dir)
+    prokka_dir = os.path.join(output_dir, prokka_dir)
     RGI_output_list = None
     if use_RGI:
-        RGI_output_list = run_RGI(os.path.join(prokka_dir, prefix_name+'.faa'),
-                                    output_dir, seq_description,
-                                    RGI_include_loose, delete_prokka_dir)
+        RGI_output_list = run_RGI(
+            os.path.join(prokka_dir, prefix_name + ".faa"),
+            output_dir,
+            seq_description,
+            RGI_include_loose,
+            delete_prokka_dir,
+        )
 
-    #Go over Prokka's output files and extract required information
+    # Go over Prokka's output files and extract required information
     seq_info = []
-    with open(os.path.join(prokka_dir, prefix_name+'.tsv'), 'r') as tsvfile:
-        reader = csv.reader(tsvfile, delimiter='\t')
-        #skip the header
+    with open(os.path.join(prokka_dir, prefix_name + ".tsv"), "r") as tsvfile:
+        reader = csv.reader(tsvfile, delimiter="\t")
+        # skip the header
         next(reader)
         for row in reader:
             mygene = row[3].strip()
-            split_gene = mygene.split('_')
-            if len(split_gene)==2 and split_gene[1].isnumeric():
+            split_gene = mygene.split("_")
+            if len(split_gene) == 2 and split_gene[1].isnumeric():
                 mygene = split_gene[0]
-            gene_info = {'locus_tag':row[0].strip(), 'gene':mygene,'length':row[2].strip(),
-                        'product':row[6].strip(),'start_pos':None, 'end_pos':None,
-                        'prokka_gene_name':mygene, 'RGI_prediction_type':None,
-                        'coverage':None, 'family': None, 'seq_value': seq[:-1],
-                        'seq_name':None, 'target_amr': None}
+            gene_info = {
+                "locus_tag": row[0].strip(),
+                "gene": mygene,
+                "length": row[2].strip(),
+                "product": row[6].strip(),
+                "start_pos": None,
+                "end_pos": None,
+                "prokka_gene_name": mygene,
+                "RGI_prediction_type": None,
+                "coverage": None,
+                "family": None,
+                "seq_value": seq[:-1],
+                "seq_name": None,
+                "target_amr": None,
+            }
             seq_info.append(gene_info)
     counter = 0
-    with open(os.path.join(prokka_dir, prefix_name+'.tbl'), 'r') as read_obj:
+    with open(os.path.join(prokka_dir, prefix_name + ".tbl"), "r") as read_obj:
         for line in read_obj:
             if line[0].isdigit():
-                cells = line.split('\t')
-                seq_info[counter]['start_pos'] = int(cells[0])
-                seq_info[counter]['end_pos'] = int(cells[1])
-                counter+=1
+                cells = line.split("\t")
+                seq_info[counter]["start_pos"] = int(cells[0])
+                seq_info[counter]["end_pos"] = int(cells[1])
+                counter += 1
 
-    #incorporate RGI findings into Prokka's
+    # incorporate RGI findings into Prokka's
     if RGI_output_list:
         for item in RGI_output_list:
             for gene_info in seq_info:
-                if item['ORF_ID'].split(' ')[0]==gene_info['locus_tag']:
-                    gene_info['gene'] = item['gene']
-                    gene_info['RGI_prediction_type'] = item['prediction_type']
-                    gene_info['family'] = item['family']
+                if item["ORF_ID"].split(" ")[0] == gene_info["locus_tag"]:
+                    gene_info["gene"] = item["gene"]
+                    gene_info["RGI_prediction_type"] = item["prediction_type"]
+                    gene_info["family"] = item["family"]
                     break
 
-    #remove temporary files and folder
+    # remove temporary files and folder
     if os.path.isfile(seq_file_name):
         os.remove(seq_file_name)
     if delete_prokka_dir:
@@ -322,122 +400,163 @@ def annotate_sequence(seq, seq_description, output_dir, prokka_prefix, use_RGI =
 
     return seq_info
 
+
 def split_up_down_info(sequence, seq_info):
-    """
-    """
+    """ """
     amr_start = -1
     amr_end = -1
     index = 0
     up_info = []
     down_info = []
     while index < len(sequence):
-        if sequence[index].islower() and amr_start==-1:
+        if sequence[index].islower() and amr_start == -1:
             amr_start = index
-        elif sequence[index].isupper() and amr_start>-1:
-            amr_end=index-1
+        elif sequence[index].isupper() and amr_start > -1:
+            amr_end = index - 1
             break
-        index+=1
-    #if there is no downstream
-    if amr_end==-1 and sequence[-1].islower():
-        amr_end = len(sequence)-1
-    elif amr_end==-1 or amr_start==-1:
-        logging.error("No AMR sequence (lower case string) was found in "+sequence)
-        import pdb; pdb.set_trace()
-    #import pdb;pdb.set_trace()
-    #find the gene has the most overlap with the found range
+        index += 1
+    # if there is no downstream
+    if amr_end == -1 and sequence[-1].islower():
+        amr_end = len(sequence) - 1
+    elif amr_end == -1 or amr_start == -1:
+        logging.error("No AMR sequence (lower case string) was found in " + sequence)
+        import pdb
+
+        pdb.set_trace()
+    # import pdb;pdb.set_trace()
+    # find the gene has the most overlap with the found range
     overlap_thr = 50
     found = False
     amr_info = []
     for gene_info in seq_info:
-        start, end = min(gene_info['start_pos'], gene_info['end_pos']), max(gene_info['start_pos'], gene_info['end_pos'])
-        if end<amr_start:
+        start, end = min(gene_info["start_pos"], gene_info["end_pos"]), max(
+            gene_info["start_pos"], gene_info["end_pos"]
+        )
+        if end < amr_start:
             up_info.append(gene_info)
-        elif start> amr_end:
+        elif start > amr_end:
             down_info.append(gene_info)
         else:
             # added by 1 because in string indecesstarts from 0
-            diff = max((amr_start+1-start), 0)+max((end - (amr_end+1)), 0)
-            if ((1-(float(diff)/(end-start)))*100)>overlap_thr:
+            diff = max((amr_start + 1 - start), 0) + max((end - (amr_end + 1)), 0)
+            if ((1 - (float(diff) / (end - start))) * 100) > overlap_thr:
                 found = True
-                gene_info['target_amr'] = 'yes'
+                gene_info["target_amr"] = "yes"
                 amr_info = gene_info
-            elif start<amr_start:
+            elif start < amr_start:
                 up_info.append(gene_info)
             else:
                 down_info.append(gene_info)
 
     return found, amr_info, up_info, down_info, seq_info
 
-def compare_two_sequences(subject, query, output_dir, threshold = 90, switch_allowed = True,
-        return_file = False, subject_coverage = True, blast_ext = ''):
+
+def compare_two_sequences(
+    subject,
+    query,
+    output_dir,
+    threshold=90,
+    switch_allowed=True,
+    return_file=False,
+    subject_coverage=True,
+    blast_ext="",
+):
     """
     To compare one sequence (shorter sequence) against the other one (longer sequence) using blastn
     """
-    #make sure subject is the longer sequence
-    if switch_allowed and len(subject)<len(query):
+    # make sure subject is the longer sequence
+    if switch_allowed and len(subject) < len(query):
         subject, query = query, subject
-    #write the query sequence into a fasta file
-    query_file_name = os.path.join(output_dir, 'query.fasta')
-    with open(query_file_name, 'w') as query_file:
-        query_file.write('> query \n')
+    # write the query sequence into a fasta file
+    query_file_name = os.path.join(output_dir, "query.fasta")
+    with open(query_file_name, "w") as query_file:
+        query_file.write("> query \n")
         query_file.write(query)
-    #write the query sequence into a fasta file
-    subject_file_name = os.path.join(output_dir, 'subject.fasta')
-    with open(subject_file_name, 'w') as subject_file:
-        subject_file.write('> subject \n')
+    # write the query sequence into a fasta file
+    subject_file_name = os.path.join(output_dir, "subject.fasta")
+    with open(subject_file_name, "w") as subject_file:
+        subject_file.write("> subject \n")
         subject_file.write(subject)
-    #run blast query for alignement
-    blast_file_name = os.path.join(output_dir, 'blast'+blast_ext+'.csv')
+    # run blast query for alignement
+    blast_file_name = os.path.join(output_dir, "blast" + blast_ext + ".csv")
     blast_file = open(blast_file_name, "w")
-    blast_command = subprocess.run(["blastn", "-query", query_file_name, "-subject",
-                        subject_file_name,"-task", "blastn-short", "-outfmt",
-                        "10 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qcovhsp"],
-                        stdout=blast_file, check= True)
+    blast_command = subprocess.run(
+        [
+            "blastn",
+            "-query",
+            query_file_name,
+            "-subject",
+            subject_file_name,
+            "-task",
+            "blastn-short",
+            "-outfmt",
+            "10 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qcovhsp",
+        ],
+        stdout=blast_file,
+        check=True,
+    )
     blast_file.close()
 
     if return_file:
         return blast_file_name
 
-    with open(blast_file_name, 'r') as file1:
+    with open(blast_file_name, "r") as file1:
         myfile = csv.reader(file1)
         for row in myfile:
-            identity=int(float(row[2]))
-            coverage = int(float(row[3])/len(subject)*100)
+            identity = int(float(row[2]))
+            coverage = int(float(row[3]) / len(subject) * 100)
             q_coverage = int(float(row[12]))
-            if subject_coverage and identity>=threshold and coverage>=threshold:
+            if subject_coverage and identity >= threshold and coverage >= threshold:
                 return True
-            if not subject_coverage and identity>=threshold and q_coverage>=threshold:
+            if (
+                not subject_coverage
+                and identity >= threshold
+                and q_coverage >= threshold
+            ):
                 return True
     return False
 
-def unnamed_genes_are_siginificantly_similar(gene_info1, gene_info2, output_dir, threshold = 90):
-    """
-    """
-    if gene_info1['gene']!='' or gene_info2['gene']!='':
+
+def unnamed_genes_are_siginificantly_similar(
+    gene_info1, gene_info2, output_dir, threshold=90
+):
+    """ """
+    if gene_info1["gene"] != "" or gene_info2["gene"] != "":
         return False
-    start1, end1 = min(gene_info1['start_pos'], gene_info1['end_pos']), max(gene_info1['start_pos'], gene_info1['end_pos'])
-    seq1 = gene_info1['seq_value'][start1-1:end1-1]
-    start2, end2 = min(gene_info2['start_pos'], gene_info2['end_pos']), max(gene_info2['start_pos'], gene_info2['end_pos'])
-    seq2 = gene_info2['seq_value'][start2-1:end2-1]
+    start1, end1 = min(gene_info1["start_pos"], gene_info1["end_pos"]), max(
+        gene_info1["start_pos"], gene_info1["end_pos"]
+    )
+    seq1 = gene_info1["seq_value"][start1 - 1 : end1 - 1]
+    start2, end2 = min(gene_info2["start_pos"], gene_info2["end_pos"]), max(
+        gene_info2["start_pos"], gene_info2["end_pos"]
+    )
+    seq2 = gene_info2["seq_value"][start2 - 1 : end2 - 1]
     return compare_two_sequences(seq1, seq2, output_dir, threshold)
 
-def seqs_annotation_are_identical(seq_info1, seq_info2, out_dir, threshold = 90):
-    """
-    """
-    if len(seq_info1)==len(seq_info2):
+
+def seqs_annotation_are_identical(seq_info1, seq_info2, out_dir, threshold=90):
+    """ """
+    if len(seq_info1) == len(seq_info2):
         identical_rows = 0
         for i, gene_info1 in enumerate(seq_info1):
             gene_info2 = seq_info2[i]
-            if (gene_info1['gene']==gene_info2['gene'] and gene_info1['gene']!='') or\
-                (gene_info1['gene']==gene_info2['gene'] and\
-                unnamed_genes_are_siginificantly_similar(gene_info1, gene_info2, out_dir, threshold) ):
-                identical_rows+=1
+            if (
+                gene_info1["gene"] == gene_info2["gene"] and gene_info1["gene"] != ""
+            ) or (
+                gene_info1["gene"] == gene_info2["gene"]
+                and unnamed_genes_are_siginificantly_similar(
+                    gene_info1, gene_info2, out_dir, threshold
+                )
+            ):
+                identical_rows += 1
         if identical_rows == len(seq_info1):
             return True
     return False
 
-def similar_seq_annotation_already_exist(seq_info_list, all_seq_info_lists, out_dir,
-                                            threshold = 90):
+
+def similar_seq_annotation_already_exist(
+    seq_info_list, all_seq_info_lists, out_dir, threshold=90
+):
     """
     To check if annotations found for the new sequence have already exists in the
     list of annotations extracted from other sequences.
@@ -456,41 +575,44 @@ def similar_seq_annotation_already_exist(seq_info_list, all_seq_info_lists, out_
 
     return found
 
+
 def extract_info_from_overlap_file(overlap_file_name):
-    """
-    """
+    """ """
     heads = []
     member_lists = []
     unique_amr_list = []
-    with open(overlap_file_name, 'r') as read_obj:
+    with open(overlap_file_name, "r") as read_obj:
         for line in read_obj:
-            if ':' in line:
-                items = line[:-1].split(':')
-                if len(items[1])>0:
+            if ":" in line:
+                items = line[:-1].split(":")
+                if len(items[1]) > 0:
                     heads.append(items[0])
-                    members = items[1].split(', ')
+                    members = items[1].split(", ")
                     member_lists.append(members)
                 else:
                     unique_amr_list.append(items[0])
     return heads, member_lists, unique_amr_list
 
+
 def extract_unique_align_files(all_align_files, unique_amr_files):
-    """
-    """
+    """ """
     amr_align_files = []
     if all_align_files:
         for amr_file in unique_amr_files:
-            found_it= False
+            found_it = False
             amr_name = extract_name_from_file_name(amr_file)
             for align_file in all_align_files:
-                if os.path.basename(align_file).startswith(amr_name+'_align'):
-                    found_it=True
+                if os.path.basename(align_file).startswith(amr_name + "_align"):
+                    found_it = True
                     amr_align_files.append(align_file)
                     break
             if not found_it:
-                logging.error("no alignment was found for "+ amr_file)
-                import pdb; pdb.set_trace()
+                logging.error("no alignment was found for " + amr_file)
+                import pdb
+
+                pdb.set_trace()
     return amr_align_files
+
 
 def extract_nodes_in_path(path):
     """
@@ -504,72 +626,86 @@ def extract_nodes_in_path(path):
     """
     start_pos = 0
     end_pos = 0
-    if path.startswith('('):
-        index = path.find(')')
+    if path.startswith("("):
+        index = path.find(")")
         start_pos = int(path[1:index])
-    if path.endswith(')'):
-        index = path.rfind('(')
-        end_pos = int(path[index+1:-1])
-    #Remove text between ()
+    if path.endswith(")"):
+        index = path.rfind("(")
+        end_pos = int(path[index + 1 : -1])
+    # Remove text between ()
     path = (re.sub("\((.*?)\)", "", path)).strip()
     node_list = []
     orientation_list = []
-    nodes = path.split(',')
+    nodes = path.split(",")
     for node in nodes:
-        if '-' in node:
-            orientation_list.append('-')
+        if "-" in node:
+            orientation_list.append("-")
         else:
-            orientation_list.append('+')
-        node = re.sub('[+-]', '', node.split()[0])
+            orientation_list.append("+")
+        node = re.sub("[+-]", "", node.split()[0])
         node_list.append(node)
     return node_list, orientation_list, start_pos, end_pos
 
-def read_path_info_from_align_file(align_file, threshold =  95):
+
+def read_path_info_from_align_file(align_file, threshold=95):
     paths_info = []
     found = False
     with open(align_file) as tsvfile:
-        reader = csv.reader(tsvfile, delimiter='\t')
-        #skip the header
+        reader = csv.reader(tsvfile, delimiter="\t")
+        # skip the header
         next(reader)
         for row in reader:
-            coverage = float(re.sub('[%]','',row[3]))
-            identity = float(re.sub('[%]','',row[5]))
-            if int(coverage) >= threshold and int(identity)>=threshold:
+            coverage = float(re.sub("[%]", "", row[3]))
+            identity = float(re.sub("[%]", "", row[5]))
+            if int(coverage) >= threshold and int(identity) >= threshold:
                 found = True
                 cell_info = row[1].strip()
-                nodes, orientation_list, start_pos, end_pos = extract_nodes_in_path(cell_info)
-                path_info = {'nodes':nodes, 'orientations':orientation_list,
-                                'start_pos':start_pos, 'end_pos':end_pos}
+                nodes, orientation_list, start_pos, end_pos = extract_nodes_in_path(
+                    cell_info
+                )
+                path_info = {
+                    "nodes": nodes,
+                    "orientations": orientation_list,
+                    "start_pos": start_pos,
+                    "end_pos": end_pos,
+                }
                 paths_info.append(path_info)
     if not found:
-        logging.info('ERROR: no path info was found in '+align_file)
+        logging.info("ERROR: no path info was found in " + align_file)
     return found, paths_info
 
-def read_path_info_from_align_file_with_multiple_amrs(align_file, threshold =  99):
-    """
-    """
+
+def read_path_info_from_align_file_with_multiple_amrs(align_file, threshold=99):
+    """ """
     paths_info_list = collections.defaultdict(list)
     with open(align_file) as tsvfile:
-        reader = csv.reader(tsvfile, delimiter='\t')
-        #skip the header
+        reader = csv.reader(tsvfile, delimiter="\t")
+        # skip the header
         next(reader)
         for row in reader:
             amr_name = restricted_amr_name_from_modified_name(
-                row[0].split('|')[-1].strip().replace(' ','_').replace("'",';'))
-            coverage = float(re.sub('[%]','',row[3]))
-            identity = float(re.sub('[%]','',row[5]))
-            if int(coverage) >= threshold and int(identity)>=threshold:
+                row[0].split("|")[-1].strip().replace(" ", "_").replace("'", ";")
+            )
+            coverage = float(re.sub("[%]", "", row[3]))
+            identity = float(re.sub("[%]", "", row[5]))
+            if int(coverage) >= threshold and int(identity) >= threshold:
                 cell_info = row[1].strip()
-                nodes, orientation_list, start_pos, end_pos = extract_nodes_in_path(cell_info)
-                path_info = {'nodes':nodes, 'orientations':orientation_list,
-                                'start_pos':start_pos, 'end_pos':end_pos}
+                nodes, orientation_list, start_pos, end_pos = extract_nodes_in_path(
+                    cell_info
+                )
+                path_info = {
+                    "nodes": nodes,
+                    "orientations": orientation_list,
+                    "start_pos": start_pos,
+                    "end_pos": end_pos,
+                }
                 paths_info_list[amr_name].append(path_info)
     return paths_info_list
 
-def extract_path_info_for_amrs(all_align_files, unique_amr_files,amr_count, threshold):
-    """
-    """
-    if len(all_align_files)==amr_count:
+
+def extract_path_info_for_amrs(all_align_files, unique_amr_files, amr_count, threshold):
+    """ """
+    if len(all_align_files) == amr_count:
         amr_align_files = extract_unique_align_files(all_align_files, unique_amr_files)
         for align_file in amr_align_files:
             found, paths_info = read_path_info_from_align_file(align_file, threshold)
@@ -577,12 +713,15 @@ def extract_path_info_for_amrs(all_align_files, unique_amr_files,amr_count, thre
                 unique_amr_path_list.append(paths_info)
             else:
                 logging.error(align_file + " file was not found or was empty!")
-                import pdb; pdb.set_trace()
+                import pdb
+
+                pdb.set_trace()
     else:
         paths_info_group_list = []
         for align_file in all_align_files:
             paths_info_group = read_path_info_from_align_file_with_multiple_amrs(
-                                        align_file, threshold)
+                align_file, threshold
+            )
             paths_info_group_list.append(paths_info_group)
         unique_amr_path_list = []
         for amr_file in unique_amr_files:
@@ -594,9 +733,14 @@ def extract_path_info_for_amrs(all_align_files, unique_amr_files,amr_count, thre
                     path_info = paths_info_group[restricted_amr_name]
                     unique_amr_path_list.append(path_info)
             if not amr_found:
-                logging.error('ERROR: no path info was found for '+restricted_amr_name)
-                import pdb; pdb.set_trace()
+                logging.error(
+                    "ERROR: no path info was found for " + restricted_amr_name
+                )
+                import pdb
+
+                pdb.set_trace()
     return unique_amr_path_list
+
 
 def delete_lines_started_with(ch, filename):
     """
@@ -607,15 +751,16 @@ def delete_lines_started_with(ch, filename):
     """
     # command = "sed -i '/^P/d' " + file_name
     # os.system(command)
-    file1 = open(filename, 'r')
-    #file2 = open('temp.txt', 'w')
-    file2 = open('temp_'+os.path.basename(filename), 'w')
+    file1 = open(filename, "r")
+    # file2 = open('temp.txt', 'w')
+    file2 = open("temp_" + os.path.basename(filename), "w")
     for line in file1.readlines():
         if not (line.startswith(ch)):
             file2.write(line)
     file1.close()
     file2.close()
-    os.rename('temp_'+os.path.basename(filename), filename)
+    os.rename("temp_" + os.path.basename(filename), filename)
+
 
 def delete_a_string_from_file(ch, filename):
     """
@@ -624,11 +769,14 @@ def delete_a_string_from_file(ch, filename):
         ch: the character or string to be deleted
         filename: the text file
     """
-    with open(filename, 'r') as infile, open('temp_'+os.path.basename(filename), 'w') as outfile:
+    with open(filename, "r") as infile, open(
+        "temp_" + os.path.basename(filename), "w"
+    ) as outfile:
         data = infile.read()
-        data = data.replace(ch,'')
+        data = data.replace(ch, "")
         outfile.write(data)
-    os.rename('temp_'+os.path.basename(filename), filename)
+    os.rename("temp_" + os.path.basename(filename), filename)
+
 
 def check_file(path: str) -> Path:
     """
@@ -638,18 +786,26 @@ def check_file(path: str) -> Path:
     if path.exists() and path.is_file():
         return path.resolve()
     else:
-        raise argparse.ArgumentTypeError(f"{path} can't be found, please double check the path")
+        raise argparse.ArgumentTypeError(
+            f"{path} can't be found, please double check the path"
+        )
 
 
 def check_dependencies(programs):
     """
     Check all dependencies exist and work
     """
-    missing=False
+    missing = False
     for program in programs:
         try:
-            output = subprocess.run(program, shell=True, check=True,
-                    stdout=subprocess.PIPE, encoding='utf-8')
+            output = subprocess.run(
+                program,
+                shell=True,
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                encoding="utf-8",
+            )
             program_name = program.split()[0]
             logging.debug(f"Tool {program_name} is installed: {output.stdout.strip()}")
         except:
@@ -684,4 +840,5 @@ def validate_range(value_type, minimum, maximum):
         if val < minimum or val > maximum:
             raise argparse.ArgumentTypeError(f"must be in range [{minimum}-{maximum}]")
         return val
+
     return range_checker
