@@ -102,3 +102,10 @@ All results will be available in specified output directory (default is `sarand_
 	    the list of the annotations in which the gene coverage difference from the AMR gene coverage is less than GENE_COVERAGE_THRESHOLD value.
 	    - prokka_dir_extracted{NUM}_{DATE}: it contains the output of prokka for annotation of a sequence extracted from the neighborhood of the target AMR gene in the assembly graph.
 	    - rgi_dir: contains RGI annotation details for all extracted neighborhood sequences of the target AMR gene.
+	    
+	    
+### Future Development Goals
+
+- Evalaute alternative search algorithms to replace/provide alternatives to Bandage's BLAST implementation e.g., [minigraph](https://github.com/lh3/minigraph) or wheeler-graph approaches.
+- Make more target gene agnostic (e.g., less built around searching for AMR genes specifically using the [CARD](card.mcmaster.ca).
+- Improve visualisation of identified neighbourhoods (e.g., use [clinker](https://github.com/gamcil/clinker) for interactive output instead of current static `dna_features_viewer` approach.
